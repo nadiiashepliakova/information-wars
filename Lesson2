@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Майстер-клас: Від хаосу в файлах до цифрового посібника (GitHub)</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c2330;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #2f81f7;
+    --accent-2: #3fb950;
+    --warn: #d29922;
+    --danger: #f85149;
+    --radius: 12px;
+    --shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ---------- Прогрес-бар ---------- */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    z-index: 1000; transition: width .1s linear;
+  }
+
+  /* ---------- Хедер ---------- */
+  header.hero {
+    padding: 56px 24px 40px;
+    text-align: center;
+    background: radial-gradient(1200px 400px at 50% -100px, rgba(47,129,247,.18), transparent 70%);
+    border-bottom: 1px solid var(--border);
+  }
+  .badge {
+    display: inline-block; padding: 4px 12px; border-radius: 999px;
+    background: rgba(47,129,247,.12); color: var(--accent);
+    border: 1px solid rgba(47,129,247,.35); font-size: 13px;
+    font-weight: 600; letter-spacing: .3px; margin-bottom: 18px;
+  }
+  header.hero h1 {
+    font-size: clamp(26px, 5vw, 44px); font-weight: 800;
+    letter-spacing: -.5px; margin-bottom: 14px;
+  }
+  header.hero h1 .grad {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header.hero p.sub {
+    color: var(--muted); font-size: clamp(15px, 2vw, 18px);
+    max-width: 720px; margin: 0 auto;
+  }
+  .meta-chips {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 26px;
+  }
+  .chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 999px; font-size: 14px; color: var(--text);
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); }
+
+  /* ---------- Навігація ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 900;
+    background: rgba(13,17,23,.85); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px; overflow-x: auto; white-space: nowrap;
+  }
+  nav.toc .inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 6px; }
+  nav.toc a {
+    color: var(--muted); font-size: 13.5px; font-weight: 600;
+    padding: 6px 12px; border-radius: 8px; text-decoration: none;
+    transition: all .2s;
+  }
+  nav.toc a:hover, nav.toc a.active { color: var(--text); background: var(--panel-2); }
+
+  /* ---------- Контейнер ---------- */
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 20px 80px; }
+  section.block { margin-bottom: 48px; scroll-margin-top: 70px; }
+  .section-head {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+  }
+  .section-head .num {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center;
+    background: rgba(47,129,247,.12); border: 1px solid rgba(47,129,247,.35);
+    color: var(--accent); font-weight: 800; font-size: 16px;
+  }
+  .section-head h2 { font-size: clamp(20px, 3vw, 26px); font-weight: 800; letter-spacing: -.3px; }
+  .section-head .time {
+    margin-left: auto; font-size: 13px; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 999px; font-weight: 600; flex: 0 0 auto;
+  }
+
+  /* ---------- Картки ---------- */
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px;
+    box-shadow: var(--shadow); margin-bottom: 16px;
+  }
+  .card p { margin-bottom: 12px; color: var(--text); }
+  .card p:last-child { margin-bottom: 0; }
+  .card ul, .card ol { padding-left: 22px; margin-bottom: 12px; }
+  .card li { margin-bottom: 8px; }
+  .card li:last-child { margin-bottom: 0; }
+  .muted { color: var(--muted); }
+  .accent { color: var(--accent); font-weight: 600; }
+  .green { color: var(--accent-2); font-weight: 600; }
+  code, .mono {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 2px 7px; border-radius: 6px; font-size: 0.9em; color: #79c0ff;
+  }
+
+  /* ---------- Застереження ---------- */
+  .note {
+    display: flex; gap: 12px; padding: 14px 18px; border-radius: 10px;
+    border: 1px solid; margin: 14px 0; font-size: 14.5px;
+  }
+  .note .ico { flex: 0 0 auto; font-size: 18px; line-height: 1.4; }
+  .note.info { border-color: rgba(47,129,247,.4); background: rgba(47,129,247,.08); }
+  .note.warn { border-color: rgba(210,153,34,.4); background: rgba(210,153,34,.08); }
+  .note.ok   { border-color: rgba(63,185,80,.4);  background: rgba(63,185,80,.08); }
+  .note.danger { border-color: rgba(248,81,73,.4); background: rgba(248,81,73,.08); }
+
+  /* ---------- Кроки ---------- */
+  .step {
+    display: flex; gap: 16px; padding: 18px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+  .step .s-num {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 800; font-size: 14px;
+    background: var(--accent); color: #fff; margin-top: 2px;
+  }
+  .step .s-body { flex: 1; }
+  .step .s-body h3 { font-size: 16.5px; margin-bottom: 6px; font-weight: 700; }
+  .step .s-body p { font-size: 15px; margin-bottom: 8px; }
+  .step .s-body p:last-child { margin-bottom: 0; }
+
+  /* ---------- Таблиця таймінгу ---------- */
+  .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  thead th {
+    background: var(--panel-2); text-align: left; padding: 12px 16px;
+    font-weight: 700; color: var(--muted); font-size: 13px;
+    text-transform: uppercase; letter-spacing: .5px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,.02); }
+  td.time-cell { font-weight: 700; color: var(--accent-2); white-space: nowrap; }
+  td.phase-cell { font-weight: 700; }
+
+  /* ---------- Демо Markdown ---------- */
+  .md-demo {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;
+  }
+  @media (max-width: 720px) { .md-demo { grid-template-columns: 1fr; } }
+  .md-col {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; overflow-x: auto;
+  }
+  .md-col .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); font-weight: 700; margin-bottom: 10px;
+  }
+  .md-col pre {
+    font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px;
+    color: #79c0ff; white-space: pre; line-height: 1.6;
+  }
+  .md-render h1 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 12px; }
+  .md-render h2 { font-size: 17px; margin-bottom: 10px; }
+  .md-render ul { padding-left: 22px; }
+  .md-render li { margin-bottom: 6px; }
+
+  /* ---------- Чекліст ---------- */
+  .checklist { display: grid; gap: 10px; }
+  .check {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px; cursor: pointer;
+    transition: all .15s; user-select: none;
+  }
+  .check:hover { border-color: var(--accent); }
+  .check input { display: none; }
+  .check .box {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px;
+    border: 2px solid var(--border); display: grid; place-items: center;
+    font-size: 13px; color: transparent; transition: all .15s; margin-top: 1px;
+  }
+  .check input:checked ~ .box {
+    background: var(--accent-2); border-color: var(--accent-2); color: #fff;
+  }
+  .check input:checked ~ .txt { color: var(--muted); text-decoration: line-through; }
+  .check .txt { font-size: 14.5px; }
+
+  /* ---------- FAQ ---------- */
+  details.faq {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 10px;
+  }
+  details.faq summary {
+    cursor: pointer; font-weight: 700; font-size: 15px;
+    list-style: none; display: flex; justify-content: space-between; gap: 12px;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::after { content: "+"; color: var(--accent); font-size: 20px; line-height: 1; }
+  details.faq[open] summary::after { content: "–"; }
+  details.faq p { margin-top: 12px; color: var(--muted); font-size: 14.5px; }
+
+  /* ---------- Футер ---------- */
+  footer {
+    text-align: center; padding: 32px 20px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 14px;
+  }
+  footer a { color: var(--accent); }
+
+  /* ---------- Кнопка вгору ---------- */
+  #toTop {
+    position: fixed; bottom: 24px; right: 24px; width: 46px; height: 46px;
+    border-radius: 50%; background: var(--accent); color: #fff; border: none;
+    font-size: 20px; cursor: pointer; box-shadow: var(--shadow);
+    opacity: 0; pointer-events: none; transition: all .3s; z-index: 800;
+  }
+  #toTop.show { opacity: 1; pointer-events: auto; }
+  #toTop:hover { background: #4b9bfa; }
+
+  @media print {
+    nav.toc, #toTop, #progress { display: none; }
+    body { background: #fff; color: #000; }
+    .card, .md-col, .check { background: #fff; border-color: #ccc; box-shadow: none; }
+    a { color: #000; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ========== ХЕДЕР ========== -->
+<header class="hero">
+  <span class="badge">Майстер-клас для вчителів · 30 хвилин</span>
+  <h1>Від хаосу в файлах до <span class="grad">структурованого цифрового посібника</span></h1>
+  <p class="sub">
+    Практична майстерня з використання GitHub: створюємо власне хмарне сховище
+    методичних матеріалів, яке завжди доступне учням за одним посиланням.
+  </p>
+  <div class="meta-chips">
+    <div class="chip"><span class="dot"></span> Тривалість: 30 хв</div>
+    <div class="chip"><span class="dot"></span> Рівень: без програмування</div>
+    <div class="chip"><span class="dot"></span> Формат: практика + демонстрація</div>
+    <div class="chip"><span class="dot"></span> Потрібен: акаунт GitHub</div>
+  </div>
+</header>
+
+<!-- ========== НАВІГАЦІЯ ========== -->
+<nav class="toc">
+  <div class="inner">
+    <a href="#plan">План</a>
+    <a href="#intro">Вступ</a>
+    <a href="#what">Що таке GitHub</a>
+    <a href="#practice">Практика</a>
+    <a href="#structure">README</a>
+    <a href="#share">Поширення</a>
+    <a href="#checklist">Чекліст</a>
+    <a href="#faq">FAQ</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ========== ПЛАН ========== -->
+  <section class="block" id="plan">
+    <div class="section-head">
+      <div class="num">01</div>
+      <h2>Структура та таймінг</h2>
+      <span class="time">0–30 хв</span>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Час</th><th>Етап</th><th>Діяльність</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="time-cell">0–3 хв</td><td class="phase-cell">Вступ</td><td>Проблематизація: «флешка, робочий стіл, сто версій презентації»</td></tr>
+            <tr><td class="time-cell">3–8 хв</td><td class="phase-cell">Огляд інтерфейсу</td><td>Що таке репозиторій і як він виглядає для учня</td></tr>
+            <tr><td class="time-cell">8–20 хв</td><td class="phase-cell">Практика (створення)</td><td>Реєстрація, створення репо, завантаження файлів, створення папок</td></tr>
+            <tr><td class="time-cell">20–27 хв</td><td class="phase-cell">Структурування</td><td>Написання README (зміст посібника) та використання Markdown</td></tr>
+            <tr><td class="time-cell">27–30 хв</td><td class="phase-cell">Питання та підсумок</td><td>Де брати посилання, як поділитися, обмеження</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ВСТУП ========== -->
+  <section class="block" id="intro">
+    <div class="section-head">
+      <div class="num">02</div>
+      <h2>Вступ та проблематизація</h2>
+      <span class="time">0–3 хв</span>
+    </div>
+    <div class="card">
+      <p><strong>Знайома ситуація?</strong> Ви готуєте матеріали до теми: презентація <code>final_v2_ostatochna.pptx</code>, тест у Word, кілька картинок і аудіо. Скидаєте це учням у месенджер. Через тиждень виходить оновлення — і ви знову надсилаєте 5 різних файлів. Учні губляться, а ви витрачаєте час.</p>
+      <p>Сьогодні ми зробимо один <span class="accent">«цифровий посібник»</span>, який виглядає як акуратний сайт зі змістом. Інструмент — <strong>GitHub</strong>. Це не просто «хмара», це місце, де файли лежать у структурі, а кожна зміна зберігається в історії.</p>
+      <div class="note ok">
+        <span class="ico">🎯</span>
+        <div><strong>Мета заняття:</strong> навчитися створювати публічний або приватний репозиторій, завантажувати файли та оформлювати головну сторінку (README) як зміст посібника.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ЩО ТАКЕ GITHUB ========== -->
+  <section class="block" id="what">
+    <div class="section-head">
+      <div class="num">03</div>
+      <h2>Що таке GitHub і як він виглядає для учня</h2>
+      <span class="time">3–8 хв</span>
+    </div>
+    <div class="card">
+      <p>GitHub — це платформа для зберігання коду, але вчителі всього світу використовують її для <strong>методичних матеріалів</strong>, бо вона безкоштовна та надійна.</p>
+      <p><strong>Ключове поняття:</strong> <span class="accent">Репозиторій</span> (Repository) — це папка вашого предмета або класу.</p>
+      <p><strong>Демонстрація:</strong> відкрийте заздалегідь підготовлений приклад репозиторію (наприклад, «Історія 10 клас»). Покажіть, як виглядає головна сторінка: заголовок, список файлів, папки.</p>
+      <div class="note info">
+        <span class="ico">💡</span>
+        <div>Файли можна переглядати прямо в браузері: PDF відкривається, картинки видно. Це і є ваш цифровий посібник — учень заходить за одним посиланням і бачить усе.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ПРАКТИКА ========== -->
+  <section class="block" id="practice">
+    <div class="section-head">
+      <div class="num">04</div>
+      <h2>Практика: створення репозиторію</h2>
+      <span class="time">8–20 хв</span>
+    </div>
+    <div class="card">
+
+      <div class="step">
+        <div class="s-num">1</div>
+        <div class="s-body">
+          <h3>Реєстрація <span class="muted">(≈2 хв)</span></h3>
+          <p>Заходимо на <a href="https://github.com" target="_blank" rel="noopener">github.com</a>. Реєструємо акаунт, якщо його немає.</p>
+          <p class="muted">Важливо: ім'я користувача має бути професійним, наприклад <code>vchytel-ivanenko</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="s-num">2</div>
+        <div class="s-body">
+          <h3>Створення «папки» (репозиторію) <span class="muted">(≈3 хв)</span></h3>
+          <p>Натискаємо зелену кнопку <strong>New repository</strong>.</p>
+          <ul>
+            <li><strong>Назва:</strong> <code>history-10-grade</code> (без пробілів, латиницею).</li>
+            <li><strong>Опис:</strong> «Цифровий посібник з історії для 10 класу».</li>
+            <li>Ставимо галочку <strong>Public</strong> (щоб учні бачили) або <strong>Private</strong> (якщо це ще чернетка).</li>
+            <li>Ставимо галочку <strong>Add a README file</strong> — це буде наша головна сторінка.</li>
+          </ul>
+          <div class="note ok">
+            <span class="ico">✅</span>
+            <div>Вітаю, у вас є власний цифровий офіс. Тепер наповнюємо його.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="s-num">3</div>
+        <div class="s-body">
+          <h3>Завантаження файлів <span class="muted">(≈5 хв)</span></h3>
+          <p>На головній сторінці репозиторію натискаємо <strong>Add file → Upload files</strong>.</p>
+          <p>Перетягніть свої файли з робочого столу: PDF-конспекти, зображення, презентації.</p>
+          <div class="note warn">
+            <span class="ico">⚠️</span>
+            <div>Якщо файл більший за <strong>25 МБ</strong>, браузер може його не прийняти. Для відео це не підходить, але для документів, презентацій та зображень — ідеально.</div>
+          </div>
+          <p><strong>Структурування (створення папок):</strong> у GitHub не можна створити порожню папку. Тому у полі для назви файлу пишемо <code>Тема 1/конспект.md</code> — коса риска автоматично створює папку.</p>
+          <div class="note info">
+            <span class="ico">📝</span>
+            <div><strong>Практичне завдання:</strong> створіть папку <code>Урок 1</code> та завантажте туди будь-який файл (зображення або текстовий документ).</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========== README / MARKDOWN ========== -->
+  <section class="block" id="structure">
+    <div class="section-head">
+      <div class="num">05</div>
+      <h2>Структурування: перетворюємо купу файлів на посібник</h2>
+      <span class="time">20–27 хв</span>
+    </div>
+    <div class="card">
+      <p>Файли лежать, але учень не розуміє, з чого почати. Головний файл — це <code>README.md</code>. Він автоматично відображається під файлами. Це і є «зміст» вашого посібника.</p>
+      <p><strong>Редагування README:</strong> натискаємо на файл <code>README.md</code>, потім олівець (Edit). Тут ми використовуємо <span class="accent">Markdown</span> — просту мову розмітки. Не лякайтеся, це просто текст із зірочками.</p>
+
+      <div class="md-demo">
+        <div class="md-col">
+          <div class="label">Що ви пишете (Markdown)</div>
+<pre># Історія України. 10 клас
+
+## Зміст
+
+- [Урок 1: Київська Русь](Урок 1/конспект.md)
+- [Презентація до уроку](Урок 1/презентація.pdf)</pre>
+        </div>
+        <div class="md-col md-render">
+          <div class="label">Що бачить учень</div>
+          <h1>Історія України. 10 клас</h1>
+          <h2>Зміст</h2>
+          <ul>
+            <li><a href="#">Урок 1: Київська Русь</a></li>
+            <li><a href="#">Презентація до уроку</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note info">
+        <span class="ico">🔗</span>
+        <div><strong>Синтаксис посилання:</strong> <code>[Текст](шлях/до/файлу)</code>. У дужках — шлях до файлу, який ми створили.</div>
+      </div>
+      <p>Тепер учень заходить, бачить гарний заголовок «Зміст», натискає на «Урок 1» і одразу потрапляє на ваш конспект. Більше не треба шукати файли в чатах.</p>
+      <div class="note ok">
+        <span class="ico">💡</span>
+        <div><strong>Порада:</strong> завжди додавайте нові посилання в README. Це і є ваша навігація.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ПОШИРЕННЯ ========== -->
+  <section class="block" id="share">
+    <div class="section-head">
+      <div class="num">06</div>
+      <h2>Підсумок та поширення</h2>
+      <span class="time">27–30 хв</span>
+    </div>
+    <div class="card">
+      <p>Подивіться на адресний рядок браузера — це посилання на ваш репозиторій. Ви можете надіслати його учням у Googl
